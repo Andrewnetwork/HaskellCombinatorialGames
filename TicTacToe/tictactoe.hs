@@ -99,15 +99,13 @@ whoWonColumn boardState = whoWonRow (transpose boardState)
 -- whoWonColumn [[(P X),(P X),(P X)],[(P X),(P X),(P O)],[(P X),(P X),(P O)]]
 
 whoWon :: Board -> Maybe Player
-whoWon boardState
-    | all (Nothing== ) res= Nothing
-    | otherwise = head (filter (\x -> Just O == x || Just X == x) res)
-    where res = map (\x -> x boardState) [whoWonDiag,whoWonCounterDiag,whoWonRow,whoWonColumn]
+whoWon boardState = getFirst (mconcat (map First res))
+    where res = map ($ boardState) [whoWonDiag,whoWonCounterDiag,whoWonRow,whoWonColumn]
 -- whoWon [[(P X),(P X),(P X)],[(P X),(P X),(P O)],[(P X),(P X),(P O)]]
 -- whoWon [[(P X),(P X),(P X)],[(P O),(P O),(P X)],[(P O),(P O),(P X)]]
 
-isBoardFull :: Foldable t => [t Cell] -> Bool
-isBoardFull boardState = not (foldl (||) False (map (any (E==)) boardState))
+isBoardFull :: Board -> Bool
+isBoardFull boardState = all (/= E) (concat boardState)
 -- isBoardFull [[(P X),(P X),(P X)],[(P O),(P O),(P X)],[(P O),(P O),(P X)]]
 -- isBoardFull [[(P X),E,E],[E,(P X),E],[E,E,(P X)]]
 
