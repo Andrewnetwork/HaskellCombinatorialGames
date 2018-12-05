@@ -13,7 +13,7 @@ module TicTacToe where
 --   column, diagonal, or counter-diagonal. 
 -- > A draw condition is reached when 9 turns have passed and no win condition has been satisfied. 
 import Data.List.Split
-import Data.List (transpose,elemIndex)
+import Data.List (transpose,elemIndex,nub)
 import Data.Maybe
 import Data.Monoid
 import System.Random
@@ -31,6 +31,7 @@ data Cell = E | P Player
 data EndState = D | W Player deriving (Show,Eq)
 type Move = (Int,Int)
 type Board = [[Cell]]
+data GameTree = Terminal EndState | Node Board [GameTree] deriving Show
 
 instance Eq Cell where
     E == E = True
@@ -235,17 +236,57 @@ playGame initPlayer boardState = case (terminalState boardState) of
  -- terminalState [[(P O),(P X),(P O)],[(P X),(P O),(P X)],[E,E,E]]
  -- validateMove O [[(P O),(P X),(P O)],[(P X),(P O),(P X)],[E,E,E]] (2,0)
 
-gameOutComes :: Player -> Board -> [EndState]
-gameOutComes player [] = [] 
-gameOutComes player boardState 
+gameOutcomes :: Player -> Board -> [EndState]
+gameOutcomes player [] = [] 
+gameOutcomes player boardState 
     | isTerminalState boardState = maybeToList $ terminalState boardState -- Maybe EndState 
-    | otherwise = concatMap (gameOutComes (otherPlayer player)) boards -- []
+    | otherwise = concatMap (gameOutcomes (otherPlayer player)) boards 
     where boards = makeAllMoves player boardState
 
--- x = gameOutComes O initialState 
+gameTree :: Player -> Board -> GameTree
+gameTree player boardState 
+    | isTerminalState boardState = Terminal (fromJust $ (terminalState boardState))
+    | otherwise = Node boardState children 
+    where boards = makeAllMoves player boardState 
+          children = map (gameTree (otherPlayer player)) boards
 
+
+gameTreeOutcomes :: GameTree -> [EndState]
+gameTreeOutcomes (Terminal x) = [x]
+gameTreeOutcomes (Node parent children) = concatMap gameTreeOutcomes children
+-- x = gameTreeOutcomes (gameTree O initialState)
+-- x = gameTree O initialState 
+
+-- Given the tic-tac-toe game tree, how many unique draw states are there? 
+
+findTerminalBoards :: Board -> EndState -> GameTree -> [Board]
+findTerminalBoards parentNode endState (Terminal x)
+    | x == endState = [parentNode] 
+    | otherwise = []
+findTerminalBoards parentNode endState (Node parent children) = concatMap (findTerminalBoards parent endState) children 
+
+-- x = findTerminalBoards initialState D (gameTree O initialState)
+-- nub x 
+-- mapM_ putStrLn ( map (unlines . fmap show)  ( nub x ) )
+
+-- Node initialState (map (\x-> Node x [Terminal D]) (makeAllMoves O initialState)
+-- Node initialState (map (\x-> Node x [Terminal D]) (makeAllMoves O initialState))
+--  Node boardState (map (\x-> Node x [Terminal D]) (concatMap (gameTree (otherPlayer player)) boards)
+-- x = gameOutcomes O initialState 
+-- length x
+-- length (filter (D==) x) 
+-- length (filter ((W O)==) x) 
+-- length (filter ((W X)==) x) 
+-- (length x) == (length (filter (D==) x)) + (length (filter ((W O)==) x)) + (length (filter ((W X)==) x) )
+-- length (filter ((W O)==) x) 
+-- length (filter ((W X)==) x) 
+
+-- nub (filter (D==) x) 
+
+
+-- Timer: :set +s
 makeAllMoves :: Player -> Board -> [Board]
 makeAllMoves player boardState = (map (move player boardState) (validMoves player boardState))
 
 --map (\x -> move O initialState x) (validMoves O initialState)
---
+-- q
