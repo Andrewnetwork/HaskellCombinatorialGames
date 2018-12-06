@@ -8,6 +8,8 @@ import Symmetry
 import Data.List (nub)
 import Data.List.Split
 
-drawBoards = nub $ findTerminalBoards initialState D (gameTree O initialState)
+--drawBoards = nub $ findTerminalBoards initialState D (gameTree O initialState)
 -- map symmetries drawBoards
 -- getSymFlags$last$(map makeSym drawBoards)
+
+-- symPath initialState 

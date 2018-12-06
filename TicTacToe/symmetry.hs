@@ -4,7 +4,7 @@
 
 module Symmetry where
 import TicTacToe 
-import Data.List (transpose,elemIndex,nub)
+import Data.List (transpose,elemIndex,nub,intercalate)
 import Data.List.Split
 
 data Symmetry a = Symmetry [[a]] [Bool] 
@@ -23,6 +23,21 @@ instance (Show a) => (Show (SymTree a)) where
     show Empty = show "Empty"
     show (SymTree symType parent children) = (show symType)++(show parent)++(show children)
 
+formatMatrix :: (Show a) => [[a]] -> String
+formatMatrix []   = "┌─┐\n└─┘\n"
+formatMatrix [[]] = "┌─┐\n└─┘\n"
+formatMatrix xxs  = (++ bot) $ concat $ zipWith (\a b -> unlines [a, b]) (top : replicate rowC mid) rows
+    where
+    rowC   = pred . length $ xxs
+    colC   = pred . length . head $ xxs
+    top    = "┌" ++ repC "─┬" ++ "─┐"
+    mid    = "├" ++ repC "─┼" ++ "─┤"
+    bot    = "└" ++ repC "─┴" ++ "─┘"
+    repC  = concat . replicate colC
+    rows   = (++ "|") . ('|' :) . intercalate "|" . ((\x -> show x) <$>) <$> xxs
+
+prettyPrintMatrix :: (Show a) => [[a]] -> IO ()
+prettyPrintMatrix  = putStrLn . formatMatrix
 
 getSymFlags (Symmetry _ flags) = flags 
 
@@ -80,9 +95,30 @@ symFlags m = map (\x -> (x m)==m) [diag,cdiag,vert,horz]
 
 makeSym mat = Symmetry mat (symFlags mat)
 
--- Problem: Given two matricies a,b determine what symmetric operations can be 
---          perfomed on a in order to produce b. 
+-- ✓ Problem: Given two matricies a,b determine what symmetric operations can be 
+--             perfomed on a in order to produce b. 
+symPath :: Eq a => Matrix a -> Matrix a -> [SymmetryPath]
+symPath a b = map (\(path,mat)->path) (filter (\(path,mat)->mat==b) symPaths)
+              where symPaths = getSymPaths [] (symTree I a [])
 
+-- symPath [[1,2,3],[4,5,6],[7,8,9]] [[7,4,1],[8,5,2],[9,6,3]] 
+-- symPath [[1,0],[1,1]] [[3,3],[3,3]] 
+
+symPathToFunc :: SymmetryPath -> (Matrix a -> Matrix a)
+symPathToFunc [] = id
+symPathToFunc (x:xs) = case x of 
+                        DS -> diag.(symPathToFunc xs)
+                        CS -> cdiag.(symPathToFunc xs)
+                        HS -> horz.(symPathToFunc xs)
+                        VS -> vert.(symPathToFunc xs)
+                        I  -> id.(symPathToFunc xs)
+-- symPathToFunc [VS] [[0,0,1],[0,1,0],[1,0,1]]
+
+verifyPaths :: Eq a => Matrix a -> Matrix a -> [SymmetryPath] -> Bool
+verifyPaths a b paths = any (\path -> (path a) == b) (map symPathToFunc paths) 
+-- verifyPaths [[1,2,3],[4,5,6],[7,8,9]] [[7,4,1],[8,5,2],[9,6,3]] (symPath [[1,2,3],[4,5,6],[7,8,9]] [[7,4,1],[8,5,2],[9,6,3]])
+
+-- [[0,0,1],[0,1,0],[1,0,1]]
 symTree :: Eq a => SymmetryType -> [[a]] -> [[[a]]] -> SymTree a
 symTree symType mat hist
     | elem mat hist = Empty
@@ -104,8 +140,11 @@ getSymPaths :: SymmetryPath -> SymTree a -> [(SymmetryPath,Matrix a)]
 getSymPaths symPath Empty  = []
 getSymPaths symPath (SymTree sym board children) = (sym:symPath,board):(concatMap (getSymPaths (sym:symPath)) children)
 
+
 -- getSymPaths [] (symTree I [[0,0,1],[0,1,0],[1,0,1]] [])
 -- getSymPaths [] (symTree I [[1,2,3],[4,5,6],[7,8,9]] [])
+-- [[1,2,3],[4,5,6],[7,8,9]] -> [[7,4,1],[8,5,2],[9,6,3]] | [HS,VS,CS,VS,HS,VS,I]
+-- 
 
 -- putStrLn (concatMap printMatrix (getBoards (symTree I [[0,0,1],[0,1,0],[1,0,1]] [])))
 -- lenSymTree (symTree I [[1,2,3],[4,5,6],[7,8,9]] [])

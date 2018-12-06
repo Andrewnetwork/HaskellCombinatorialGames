@@ -16,7 +16,7 @@ module TicTacToe where
 --   column, diagonal, or counter-diagonal. 
 -- > A draw condition is reached when 9 turns have passed and no win condition has been satisfied. 
 import Data.List.Split
-import Data.List (transpose,elemIndex,nub)
+import Data.List (transpose,elemIndex,nub,intercalate)
 import Data.Maybe
 import Data.Monoid
 import System.Random
@@ -24,6 +24,25 @@ import System.Random
 -- #### Helper Functions ####
 printBoard :: Board -> IO ()
 printBoard boardState = putStrLn.init $ concatMap (\x->x++"\n") (map show boardState)
+
+formatBoard :: [[Cell]] -> String
+formatBoard []   = "┌─┐\n└─┘\n"
+formatBoard [[]] = "┌─┐\n└─┘\n"
+formatBoard xxs  = (++ bot) $ concat $ zipWith (\a b -> unlines [a, b]) (top : replicate rowC mid) rows
+  where
+    rowC   = pred . length $ xxs
+    colC   = pred . length . head $ xxs
+    top    = "┌" ++ repC "─┬" ++ "─┐"
+    mid    = "├" ++ repC "─┼" ++ "─┤"
+    bot    = "└" ++ repC "─┴" ++ "─┘"
+    repC  = concat . replicate colC
+    rows   = (++ "|") . ('|' :) . intercalate "|" . ((\x -> if x == E then " " else show x) <$>) <$> xxs
+
+prettyPrint :: [[Cell]] -> IO ()
+prettyPrint = putStrLn . formatBoard
+--prettyPrint [[(P X),E,E],[E,(P X),E],[E,E,(P X)]]
+-- credit: newmaidumosa
+
 -- printBoard [[(P X),E,E],[E,(P X),E],[E,E,(P X)]]
 
 -- #### Data Structures ####
