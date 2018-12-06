@@ -2,6 +2,9 @@
 -- December 2018
 -- Andrew Ribeiro 
 
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE FlexibleInstances #-}
+
 module TicTacToe where
 -- Rules of the game: 
 -- > Board is initially empty.
@@ -29,9 +32,14 @@ printBoard boardState = putStrLn.init $ concatMap (\x->x++"\n") (map show boardS
 data Player = X | O deriving Show 
 data Cell = E | P Player
 data EndState = D | W Player deriving (Show,Eq)
+data GameTree = Terminal EndState | Node Board [GameTree] deriving Show
+data Game = Game [Board] EndState 
 type Move = (Int,Int)
 type Board = [[Cell]]
-data GameTree = Terminal EndState | Node Board [GameTree] deriving Show
+
+
+instance {-# OVERLAPPING #-} Show Board where
+    show x = "\n"++concatMap (\x->x++"\n") (map show x)
 
 instance Eq Cell where
     E == E = True
@@ -245,17 +253,17 @@ gameOutcomes player boardState
 
 gameTree :: Player -> Board -> GameTree
 gameTree player boardState 
-    | isTerminalState boardState = Terminal (fromJust $ (terminalState boardState))
+    | isTerminalState boardState = Node boardState [Terminal (fromJust $ (terminalState boardState))]
     | otherwise = Node boardState children 
     where boards = makeAllMoves player boardState 
           children = map (gameTree (otherPlayer player)) boards
-
+-- x = gameTree O initialState 
 
 gameTreeOutcomes :: GameTree -> [EndState]
 gameTreeOutcomes (Terminal x) = [x]
 gameTreeOutcomes (Node parent children) = concatMap gameTreeOutcomes children
 -- x = gameTreeOutcomes (gameTree O initialState)
--- x = gameTree O initialState 
+
 
 -- Given the tic-tac-toe game tree, how many unique draw states are there? 
 
@@ -266,7 +274,8 @@ findTerminalBoards parentNode endState (Terminal x)
 findTerminalBoards parentNode endState (Node parent children) = concatMap (findTerminalBoards parent endState) children 
 
 -- x = findTerminalBoards initialState D (gameTree O initialState)
--- nub x 
+-- z = nub x 
+-- mapM_ putStrLn ( map (unlines . fmap show)  z )
 -- mapM_ putStrLn ( map (unlines . fmap show)  ( nub x ) )
 
 -- Node initialState (map (\x-> Node x [Terminal D]) (makeAllMoves O initialState)
