@@ -58,7 +58,7 @@ type Board = [[Cell]]
 
 
 instance {-# OVERLAPPING #-} Show Board where
-    show x = "\n"++concatMap (\x->x++"\n") (map show x)
+    show x = formatBoard x
 
 instance Eq Cell where
     E == E = True
