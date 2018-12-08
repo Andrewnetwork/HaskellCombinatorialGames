@@ -1,4 +1,4 @@
--- tictactoe.hs
+-- TicTacToe.hs
 -- December 2018
 -- Andrew Ribeiro 
 
@@ -6,59 +6,21 @@
 {-# LANGUAGE FlexibleInstances #-}
 
 module TicTacToe where
--- Rules of the game: 
--- > Board is initially empty.
--- > A starting player is chosen at random. 
--- > The player who "owns" the turn may place his piece in any empty cell. 
--- > After a player plays his piece, the turn enters the end turn stage. 
--- > In the end turn stage either the game terminates (win/draw) or next player is passed ownership of the board. 
--- > A win condition for player z=(x|y) is reached when there are three z's along a row, 
---   column, diagonal, or counter-diagonal. 
--- > A draw condition is reached when 9 turns have passed and no win condition has been satisfied. 
+
 import Data.List.Split
 import Data.List (transpose,elemIndex,nub,intercalate)
 import Data.Maybe
 import Data.Monoid
-import System.Random
-
--- #### Helper Functions ####
-printBoard :: Board -> IO ()
-printBoard boardState = putStrLn.init $ concatMap (\x->x++"\n") (map show boardState)
-
-formatBoard :: [[Cell]] -> String
-formatBoard []   = "┌─┐\n└─┘\n"
-formatBoard [[]] = "┌─┐\n└─┘\n"
-formatBoard xxs  = (++ bot) $ concat $ zipWith (\a b -> unlines [a, b]) (top : replicate rowC mid) rows
-  where
-    rowC   = pred . length $ xxs
-    colC   = pred . length . head $ xxs
-    top    = "┌" ++ repC "─┬" ++ "─┐"
-    mid    = "├" ++ repC "─┼" ++ "─┤"
-    bot    = "└" ++ repC "─┴" ++ "─┘"
-    repC  = concat . replicate colC
-    rows   = (++ "|") . ('|' :) . intercalate "|" . ((\x -> if x == E then " " else show x) <$>) <$> xxs
-
-prettyPrint :: [[Cell]] -> IO ()
-prettyPrint = putStrLn . formatBoard
---prettyPrint [[(P X),E,E],[E,(P X),E],[E,E,(P X)]]
--- credit: newmaidumosa
-
--- printBoard [[(P X),E,E],[E,(P X),E],[E,E,(P X)]]
 
 -- #### Data Structures ####
--- Cells, Boards, Turns, Games. 
--- Boards ⊂ Cell X Cell X ..6.. X Cell 
 data Player = X | O deriving Show 
 data Cell = E | P Player
 data EndState = D | W Player deriving (Show,Eq)
-data GameTree = Terminal EndState | Node Board [GameTree] deriving Show
-data Game = Game [Board] EndState 
 type Move = (Int,Int)
 type Board = [[Cell]]
 
-
 instance {-# OVERLAPPING #-} Show Board where
-    show x = formatBoard x
+    show x = "\n"++formatBoard x
 
 instance Eq Cell where
     E == E = True
@@ -77,10 +39,27 @@ instance Eq Player where
     O == O = True 
 
 initialState = [[E,E,E],[E,E,E],[E,E,E]]
--- We can represent a board state in various ways. For example, the following would represent an empty board:
--- (1) [E,E,E,E,E,E,E,E,E]
--- (2) [[E,E,E],[E,E,E],[E,E,E]]
--- We will be using the nested representation (2).  
+
+-- #### Helper Functions ####
+printBoard :: Board -> IO ()
+printBoard boardState = putStrLn.init $ concatMap (\x->x++"\n") (map show boardState)
+
+-- credit: newmaidumosa
+formatBoard :: [[Cell]] -> String
+formatBoard []   = "┌─┐\n└─┘\n"
+formatBoard [[]] = "┌─┐\n└─┘\n"
+formatBoard xxs  = (++ bot) $ concat $ zipWith (\a b -> unlines [a, b]) (top : replicate rowC mid) rows
+  where
+    rowC   = pred . length $ xxs
+    colC   = pred . length . head $ xxs
+    top    = "┌" ++ repC "─┬" ++ "─┐"
+    mid    = "├" ++ repC "─┼" ++ "─┤"
+    bot    = "└" ++ repC "─┴" ++ "─┘"
+    repC  = concat . replicate colC
+    rows   = (++ "|") . ('|' :) . intercalate "|" . ((\x -> if x == E then " " else show x) <$>) <$> xxs
+
+prettyPrint :: [[Cell]] -> IO ()
+prettyPrint = putStrLn . formatBoard
 
 -- #### Game Functions ####
 insert :: (Eq t1, Num t1) => t2 -> [t2] -> t1 -> [t2]
@@ -109,7 +88,7 @@ move player boardState position = chunksOf 3 (insert
 -- (3) A player piece can only replace an empty cell, not another player. (no obstructions)
 
 isValidMove :: Player -> Board -> Move -> Bool
-isValidMove player boardState position = foldl (&&) True (validateMove player boardState position)
+isValidMove player boardState position = (fst position <= 2) && (snd position <= 2) && (fst position >= 0) && (snd position >= 0) && (foldl (&&) True (validateMove player boardState position))
 
 validateMove :: Player -> Board -> Move -> [Bool]
 validateMove player boardState position = [pieceCountCond,terminalCond,emptyCellCond]
@@ -123,37 +102,24 @@ speakAboutMove player boardState position = (if not (validationConds !! 0) then 
                                             (if not (validationConds !! 1) then "The game is over man! " else "")++
                                             (if not (validationConds !! 2) then "There's a piece there! " else "")
                                             where validationConds = validateMove player boardState position
--- speakAboutMove O initialState (0,0)
--- speakAboutMove O [[(P O),E,E],[E,E,E],[E,E,E]] (0,0)
--- speakAboutMove O [[(P O),E,E],[E,(P O),E],[E,E,(P O)]] (2,2)
 
-
---playerTurn boardState =
 otherPlayer X = O
 otherPlayer O = X
-
--- [isPieceCountValid ,isTerminalState,isPlayerLoc]
 
 isTerminalState :: Board -> Bool
 isTerminalState boardState = case (terminalState boardState) of
                                 Nothing -> False 
                                 _ -> True
--- isTerminalState [[(P O),E,E],[E,(P O),E],[E,E,(P X)]]
--- isTerminalState [[(P O),E,E],[E,(P O),E],[E,E,(P O)]]
 
 isPlayerLoc :: Board -> Move -> Bool
 isPlayerLoc boardState move = ((concat boardState)!!(collapseIndex move 3)) /= E
---isPlayerLoc [[(P O),E,E],[E,(P O),E],[E,E,(P X)]] (0,0)
 
 isPieceCountValid :: Board -> Bool
 isPieceCountValid boardState = (abs ((countPlayer X boardState)-(countPlayer O boardState))) <= 1
--- isPieceCountValid [[(P X),E,E],[E,(P X),E],[E,E,(P X)]] -> False
--- isPieceCountValid initialState
--- isPieceCountValid [[(P O),E,E],[E,(P O),E],[E,E,(P X)]] 
 
 countCell :: Cell -> Board -> Int
 countCell cell boardState = length $ filter (cell==) (concat boardState) 
--- countCell (P X) [[(P X),E,E],[E,(P X),E],[E,E,(P X)]]
+
 
 countPlayer :: Player -> Board -> Int
 countPlayer player boardState = countCell (playerToCell player) boardState
@@ -183,34 +149,29 @@ playerToCell X = P X
 playerToCell O = P O  
 
 -- #### Win Conditions ####
-whoWonDiag :: Board -> Maybe Player
-whoWonDiag boardState
-    | isAllPlayer res = Just (cellToPlayer (head res))
-    | otherwise = Nothing
+diagThrees :: Board -> [Player]
+diagThrees boardState
+    | isAllPlayer res = [cellToPlayer (head res)]
+    | otherwise = []
     where res = incGrabber boardState 0
 -- whoWonDiag [[(P X),E,E],[E,(P X),E],[E,E,(P X)]]
 
-whoWonCounterDiag :: Board -> Maybe Player
-whoWonCounterDiag boardState = whoWonDiag (reverse boardState)
+cDiagThrees :: Board -> [Player]
+cDiagThrees boardState = diagThrees (reverse boardState)
 -- whoWonCounterDiag [[(P X),E,E],[E,(P X),E],[E,E,(P X)]]
 -- whoWonCounterDiag [[E,E,(P X)],[E,(P X),E],[(P X),E,E]]
 
-whoWonRow :: Board -> Maybe Player
-whoWonRow boardState = 
-    case (filter isAllPlayer boardState) of
-        [] -> Nothing
-        (x:xs) -> Just (cellToPlayer ( head x))
--- whoWonRow [[(P X),(P X),(P X)],[(P X),(P X),(P O)],[(P X),(P X),(P O)]]
--- whoWonRow [[(P X),E,E],[E,(P X),E],[E,E,(P X)]]
--- whoWonRow (transpose [[(P X),(P X),(P X)],[(P X),(P X),(P O)],[(P X),(P X),(P O)]])
+rowThrees :: Board -> [Player]
+rowThrees boardState = case (filter isAllPlayer boardState) of
+                         [] -> []
+                         x -> map cellToPlayer (map head x)
 
-whoWonColumn :: Board -> Maybe Player
-whoWonColumn boardState = whoWonRow (transpose boardState)
+columnThrees :: Board -> [Player]
+columnThrees boardState = rowThrees (transpose boardState)
 -- whoWonColumn [[(P X),(P X),(P X)],[(P X),(P X),(P O)],[(P X),(P X),(P O)]]
 
-whoWon :: Board -> Maybe Player
-whoWon boardState = getFirst (mconcat (map First res))
-    where res = map ($ boardState) [whoWonDiag,whoWonCounterDiag,whoWonRow,whoWonColumn]
+playerThrees :: Board -> [Player]
+playerThrees boardState = concatMap ($ boardState) [diagThrees,cDiagThrees,rowThrees,columnThrees]
 -- whoWon [[(P X),(P X),(P X)],[(P X),(P X),(P O)],[(P X),(P X),(P O)]]
 -- whoWon [[(P X),(P X),(P X)],[(P O),(P O),(P X)],[(P O),(P O),(P X)]]
 
@@ -221,10 +182,10 @@ isBoardFull boardState = all (/= E) (concat boardState)
 
 terminalState :: Board -> Maybe EndState
 terminalState boardState 
-    | winState /= Nothing = Just (W (fromJust winState) )
-    | boardFull && (winState == Nothing) = Just D 
+    | not.null $ winState = Just (W (head winState) )
+    | boardFull && (null winState) = Just D 
     | otherwise = Nothing 
-    where winState = whoWon boardState
+    where winState = playerThrees boardState
           boardFull = isBoardFull boardState
 -- terminalState [[(P X),E,E],[E,(P X),E],[E,E,(P X)]]
 -- terminalState initialState 
@@ -232,12 +193,7 @@ terminalState boardState
 validMoves :: Player -> Board -> [Move]
 validMoves player boardState = [(x,y) | x<-[0,1,2], y<-[0,1,2], isValidMove player boardState (x,y)]
 -- validMoves O initialState
-
---makeRandomMove player boardState  = do let moves = validMoves player boardState
-                                     -- idx <- randomRIO(0,length(moves))
-                                      --move player boardState (moves !! idx) 
-
-                                      
+        
 pickFirstMove player boardState = move player boardState (head (validMoves player boardState))
 -- pickFirstMove X (pickFirstMove O initialState)
 -- pickFirstMove O (pickFirstMove O initialState)
@@ -263,35 +219,18 @@ playGame initPlayer boardState = case (terminalState boardState) of
  -- terminalState [[(P O),(P X),(P O)],[(P X),(P O),(P X)],[E,E,E]]
  -- validateMove O [[(P O),(P X),(P O)],[(P X),(P O),(P X)],[E,E,E]] (2,0)
 
-gameOutcomes :: Player -> Board -> [EndState]
-gameOutcomes player [] = [] 
-gameOutcomes player boardState 
-    | isTerminalState boardState = maybeToList $ terminalState boardState -- Maybe EndState 
-    | otherwise = concatMap (gameOutcomes (otherPlayer player)) boards 
-    where boards = makeAllMoves player boardState
 
-gameTree :: Player -> Board -> GameTree
-gameTree player boardState 
-    | isTerminalState boardState = Node boardState [Terminal (fromJust $ (terminalState boardState))]
-    | otherwise = Node boardState children 
-    where boards = makeAllMoves player boardState 
-          children = map (gameTree (otherPlayer player)) boards
--- x = gameTree O initialState 
 
-gameTreeOutcomes :: GameTree -> [EndState]
-gameTreeOutcomes (Terminal x) = [x]
-gameTreeOutcomes (Node parent children) = concatMap gameTreeOutcomes children
--- x = gameTreeOutcomes (gameTree O initialState)
+--findTerminalBoards parentNode endState (Terminal x)
 
+-- isEndStatePath D (gameTree O initialState)
 
 -- Given the tic-tac-toe game tree, how many unique draw states are there? 
 
-findTerminalBoards :: Board -> EndState -> GameTree -> [Board]
-findTerminalBoards parentNode endState (Terminal x)
-    | x == endState = [parentNode] 
-    | otherwise = []
-findTerminalBoards parentNode endState (Node parent children) = concatMap (findTerminalBoards parent endState) children 
 
+
+
+-- findTerminalBoards [[(P O),(P X),(P O)],[(P X),(P O),(P X)],[E,E,E]] (W O) (gameTree O [[(P O),(P X),(P O)],[(P X),(P O),(P X)],[E,E,E]])
 -- x = findTerminalBoards initialState D (gameTree O initialState)
 -- z = nub x 
 -- mapM_ putStrLn ( map (unlines . fmap show)  z )
@@ -313,8 +252,6 @@ findTerminalBoards parentNode endState (Node parent children) = concatMap (findT
 
 
 -- Timer: :set +s
-makeAllMoves :: Player -> Board -> [Board]
-makeAllMoves player boardState = (map (move player boardState) (validMoves player boardState))
 
 --map (\x -> move O initialState x) (validMoves O initialState)
 -- q

@@ -1,4 +1,4 @@
--- symmetry.hs
+-- Symmetry.hs
 -- December 2018
 -- Andrew Ribeiro 
 
@@ -56,7 +56,7 @@ vert board = map reverse board
 -- map (\[a,b,c] -> [c,b,a]) board
 
 horz :: [a] -> [a]
-horz board =  reverse board
+horz board = reverse board
 -- horz [[(P X),E,E],[E,(P X),E],[E,E,(P X)]]
 -- horz [[(P X),E,E],[E,(P X),E],[E,E,(P X)]]
 -- horz [[(P O),(P X),(P O)],[(P X),(P O),(P X)],[(P O),(P X),(P O)]]
@@ -100,7 +100,6 @@ makeSym mat = Symmetry mat (symFlags mat)
 symPath :: Eq a => Matrix a -> Matrix a -> [SymmetryPath]
 symPath a b = map (\(path,mat)->path) (filter (\(path,mat)->mat==b) symPaths)
               where symPaths = getSymPaths [] (symTree I a [])
-
 -- symPath [[1,2,3],[4,5,6],[7,8,9]] [[7,4,1],[8,5,2],[9,6,3]] 
 -- symPath [[1,0],[1,1]] [[3,3],[3,3]] 
 
@@ -141,6 +140,8 @@ getSymPaths symPath Empty  = []
 getSymPaths symPath (SymTree sym board children) = (sym:symPath,board):(concatMap (getSymPaths (sym:symPath)) children)
 
 
+--  map (\x->x [[1,0],[1,1]] )  (map symPathToFunc (symPath [[1,0],[1,1]] [[1,1],[1,0]]))
+--  map ((\x->x [[1,0],[1,1]] ).symPathToFunc) (symPath [[1,0],[1,1]] [[1,1],[1,0]])
 -- getSymPaths [] (symTree I [[0,0,1],[0,1,0],[1,0,1]] [])
 -- getSymPaths [] (symTree I [[1,2,3],[4,5,6],[7,8,9]] [])
 -- [[1,2,3],[4,5,6],[7,8,9]] -> [[7,4,1],[8,5,2],[9,6,3]] | [HS,VS,CS,VS,HS,VS,I]
