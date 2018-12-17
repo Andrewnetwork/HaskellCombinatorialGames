@@ -1,25 +1,25 @@
 -- Symmetry.hs
 -- December 2018
--- Andrew Ribeiro 
+-- Andrew Ribeiro
 
 module Symmetry where
-import TicTacToe 
+import TicTacToe
 import Data.List (transpose,elemIndex,nub,intercalate)
 import Data.List.Split
 
-data Symmetry a = Symmetry [[a]] [Bool] 
+data Symmetry a = Symmetry [[a]] [Bool]
 data SymmetryType = DS | CS | HS | VS | I deriving Show
-data SymTree a = Empty | SymTree SymmetryType (Matrix a) [SymTree a] 
+data SymTree a = Empty | SymTree SymmetryType (Matrix a) [SymTree a]
 type Matrix a = [[a]]
 type SymmetryPath = [SymmetryType]
 
-instance (Show a) => (Show (Symmetry a)) where 
+instance (Show a) => (Show (Symmetry a)) where
     show (Symmetry ls conds)
         | any (True==) conds = boardStr ++ (strSymConds conds) ++ "\n"
         | otherwise = boardStr ++ "No symmetry.\n"
         where boardStr = "\n"++concatMap (\x->x++"\n") (map show ls)
 
-instance (Show a) => (Show (SymTree a)) where 
+instance (Show a) => (Show (SymTree a)) where
     show Empty = show "Empty"
     show (SymTree symType parent children) = (show symType)++(show parent)++(show children)
 
@@ -39,7 +39,7 @@ formatMatrix xxs  = (++ bot) $ concat $ zipWith (\a b -> unlines [a, b]) (top : 
 prettyPrintMatrix :: (Show a) => [[a]] -> IO ()
 prettyPrintMatrix  = putStrLn . formatMatrix
 
-getSymFlags (Symmetry _ flags) = flags 
+getSymFlags (Symmetry _ flags) = flags
 
 strSymConds conds = concatMap (\x -> snd x) (filter (\x -> fst x) (zip conds ["D","C","V","H"]))
 
@@ -62,8 +62,8 @@ horz board = reverse board
 -- horz [[(P O),(P X),(P O)],[(P X),(P O),(P X)],[(P O),(P X),(P O)]]
 -- horz [[(P X),(P O),(P X)],[(P X),(P O),(P X)],[(P O),(P X),(P O)]]
 
--- Transposing a board's rows reflects across the diagonal. 
--- Transposition is making the columns of the board, the rows of the board. 
+-- Transposing a board's rows reflects across the diagonal.
+-- Transposition is making the columns of the board, the rows of the board.
 
 diag :: [[a]] -> [[a]]
 diag board = transpose board
@@ -73,10 +73,10 @@ diag board = transpose board
 -- diag [[E,(P X),(P O)],[E,(P X),E],[(P X),(P O),E]]
 
 cdiag :: [[a]] -> [[a]]
-cdiag board = diag.vert.horz $ board 
+cdiag board = diag.vert.horz $ board
 -- cdiag [[(P X),(P O),(P X)],[(P X),(P O),(P X)],[(P O),(P X),(P O)]]
 
--- Challenge: get the following board pointing North, use the 
+-- Challenge: get the following board pointing North, use the
 -- operations defined here to make the board point East, West, South
 -- x = [[E,(P X),E],[(P X),E,(P X)],[(P X),E,(P X)]]
 -- West ->  diag x
@@ -95,17 +95,17 @@ symFlags m = map (\x -> (x m)==m) [diag,cdiag,vert,horz]
 
 makeSym mat = Symmetry mat (symFlags mat)
 
--- ✓ Problem: Given two matricies a,b determine what symmetric operations can be 
---             perfomed on a in order to produce b. 
+-- ✓ Problem: Given two matricies a,b determine what symmetric operations can be
+--             perfomed on a in order to produce b.
 symPath :: Eq a => Matrix a -> Matrix a -> [SymmetryPath]
 symPath a b = map (\(path,mat)->path) (filter (\(path,mat)->mat==b) symPaths)
               where symPaths = getSymPaths [] (symTree I a [])
--- symPath [[1,2,3],[4,5,6],[7,8,9]] [[7,4,1],[8,5,2],[9,6,3]] 
--- symPath [[1,0],[1,1]] [[3,3],[3,3]] 
+-- symPath [[1,2,3],[4,5,6],[7,8,9]] [[7,4,1],[8,5,2],[9,6,3]]
+-- symPath [[1,0],[1,1]] [[3,3],[3,3]]
 
 symPathToFunc :: SymmetryPath -> (Matrix a -> Matrix a)
 symPathToFunc [] = id
-symPathToFunc (x:xs) = case x of 
+symPathToFunc (x:xs) = case x of
                         DS -> diag.(symPathToFunc xs)
                         CS -> cdiag.(symPathToFunc xs)
                         HS -> horz.(symPathToFunc xs)
@@ -114,7 +114,7 @@ symPathToFunc (x:xs) = case x of
 -- symPathToFunc [VS] [[0,0,1],[0,1,0],[1,0,1]]
 
 verifyPaths :: Eq a => Matrix a -> Matrix a -> [SymmetryPath] -> Bool
-verifyPaths a b paths = any (\path -> (path a) == b) (map symPathToFunc paths) 
+verifyPaths a b paths = any (\path -> (path a) == b) (map symPathToFunc paths)
 -- verifyPaths [[1,2,3],[4,5,6],[7,8,9]] [[7,4,1],[8,5,2],[9,6,3]] (symPath [[1,2,3],[4,5,6],[7,8,9]] [[7,4,1],[8,5,2],[9,6,3]])
 
 -- [[0,0,1],[0,1,0],[1,0,1]]
@@ -145,7 +145,7 @@ getSymPaths symPath (SymTree sym board children) = (sym:symPath,board):(concatMa
 -- getSymPaths [] (symTree I [[0,0,1],[0,1,0],[1,0,1]] [])
 -- getSymPaths [] (symTree I [[1,2,3],[4,5,6],[7,8,9]] [])
 -- [[1,2,3],[4,5,6],[7,8,9]] -> [[7,4,1],[8,5,2],[9,6,3]] | [HS,VS,CS,VS,HS,VS,I]
--- 
+--
 
 -- putStrLn (concatMap printMatrix (getBoards (symTree I [[0,0,1],[0,1,0],[1,0,1]] [])))
 -- lenSymTree (symTree I [[1,2,3],[4,5,6],[7,8,9]] [])
@@ -170,13 +170,13 @@ getSymPaths symPath (SymTree sym board children) = (sym:symPath,board):(concatMa
 
 -- symTree I [[1,2,3],[4,5,6],[7,8,9]] []
 -- [[[1,2],[3,4]],[[5,6],[7,8]]]++[[9,10],[11,12]]
--- map (\x -> x OP (depth-1)) (map symTree reflections) 
+-- map (\x -> x OP (depth-1)) (map symTree reflections)
 -- ($mat) <$> [diag,cdiag,vert,horz]
 -- children =  map (\x -> x OP (depth-1)) (map symTree reflections
 -- ($ [[1,2,3],[4,5,6],[7,8,9]]) <$> [diag,cdiag,vert,horz]
 --elem mat hist = Empty
 -- children = map (gameTree (otherPlayer player)) boards
--- TODO: Local Symmetry 
+-- TODO: Local Symmetry
 -- strSymConds$symFlags$[[0,1,0],[0,0,1],[0,0,0]]
 -- strSymConds$symFlags$[[0,1],[1,0]]
 -- symTree I [[1,2],[3,4]] []

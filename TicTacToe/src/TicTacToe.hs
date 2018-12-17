@@ -1,6 +1,6 @@
 -- TicTacToe.hs
 -- December 2018
--- Andrew Ribeiro 
+-- Andrew Ribeiro
 
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -13,7 +13,7 @@ import Data.Maybe
 import Data.Monoid
 
 -- #### Data Structures ####
-data Player = X | O deriving Show 
+data Player = X | O deriving Show
 data Cell = E | P Player
 data EndState = D | W Player deriving (Show,Eq)
 type Move = (Int,Int)
@@ -25,18 +25,18 @@ instance {-# OVERLAPPING #-} Show Board where
 instance Eq Cell where
     E == E = True
     P a == P b = a == b
-    E == P a = False 
-    P a == E = False   
+    E == P a = False
+    P a == E = False
 
-instance Show Cell where 
+instance Show Cell where
     show E = "E"
     show (P x) = show x
 
 instance Eq Player where
-    X == O = False 
-    O == X = False 
-    X == X = True 
-    O == O = True 
+    X == O = False
+    O == X = False
+    X == X = True
+    O == O = True
 
 initialState = [[E,E,E],[E,E,E],[E,E,E]]
 
@@ -67,22 +67,22 @@ insert e [] pos = []
 insert e (x:xs) pos
     | pos == 0 = e:xs
     | otherwise = x:(insert e (xs) (pos-1))
--- insert 2 [1,1,1,1,1,1] 3 
+-- insert 2 [1,1,1,1,1,1] 3
 
 collapseIndex :: Num a => (a, a) -> a -> a
 collapseIndex multIndex rowLen = (fst multIndex)*rowLen+(snd multIndex)
 
 move :: Player -> Board -> Move -> Board
-move player boardState position = chunksOf 3 (insert 
-                                                (playerToCell player) 
-                                                (mconcat boardState) 
+move player boardState position = chunksOf 3 (insert
+                                                (playerToCell player)
+                                                (mconcat boardState)
                                                 (collapseIndex position 3))
 -- move X initialState (2,2)
 -- printBoard (move X initialState (2,2))
 -- printBoard (move O (move X initialState (2,1)) (0,0))
 -- printBoard (move O (move O initialState (2,1)) (0,0))
 
--- We need to account for three conditions in determining if a move is valid. 
+-- We need to account for three conditions in determining if a move is valid.
 -- (1) The number of player pieces differs by no more than one. (captures alternating turn rule)
 -- (2) The game is not in a terminal state. (not a win/draw already)
 -- (3) A player piece can only replace an empty cell, not another player. (no obstructions)
@@ -94,7 +94,7 @@ validateMove :: Player -> Board -> Move -> [Bool]
 validateMove player boardState position = [pieceCountCond,terminalCond,emptyCellCond]
                                           where proposedBoard = move player boardState position
                                                 pieceCountCond = abs((countPlayer player boardState)+1 - (countPlayer (otherPlayer player) boardState)) <= 1
-                                                terminalCond = not (isTerminalState boardState) 
+                                                terminalCond = not (isTerminalState boardState)
                                                 emptyCellCond = not (isPlayerLoc boardState position)
 -- validateMove O initialState (0,0)
 speakAboutMove :: Player -> Board -> Move -> [Char]
@@ -108,7 +108,7 @@ otherPlayer O = X
 
 isTerminalState :: Board -> Bool
 isTerminalState boardState = case (terminalState boardState) of
-                                Nothing -> False 
+                                Nothing -> False
                                 _ -> True
 
 isPlayerLoc :: Board -> Move -> Bool
@@ -118,7 +118,7 @@ isPieceCountValid :: Board -> Bool
 isPieceCountValid boardState = (abs ((countPlayer X boardState)-(countPlayer O boardState))) <= 1
 
 countCell :: Cell -> Board -> Int
-countCell cell boardState = length $ filter (cell==) (concat boardState) 
+countCell cell boardState = length $ filter (cell==) (concat boardState)
 
 
 countPlayer :: Player -> Board -> Int
@@ -129,16 +129,16 @@ countPlayer player boardState = countCell (playerToCell player) boardState
 
 -- [[0,1,2],[3,4,5],[6,7,8]] -> [0,4,8]
 -- [[0,1,2,3],[4,5,6,7],[8,9,10,11],[12,13,14,15]] -> [0,5,10,15]
--- Problem: Given a list of lists, produce a list where the first element 
---          of the list is the first element of the first list, the second 
+-- Problem: Given a list of lists, produce a list where the first element
+--          of the list is the first element of the first list, the second
 --          element the second element of the second list, and so on.
-incGrabber :: [[a]] -> Int -> [a] 
+incGrabber :: [[a]] -> Int -> [a]
 incGrabber [] n = []
 incGrabber (x:xs) n = (x!!n):(incGrabber xs (n+1))
 -- incGrabber [[0,1,2,3],[4,5,6,7],[8,9,10,11],[12,13,14,15]]
 
 isAllPlayer :: [Cell] -> Bool
-isAllPlayer [a,b,c] = (a == b) && (b == c) && a /= E 
+isAllPlayer [a,b,c] = (a == b) && (b == c) && a /= E
 
 cellToPlayer :: Cell -> Player
 cellToPlayer (P x) = x
@@ -146,7 +146,25 @@ cellToPlayer E = error "Cannot convert E to a player."
 
 playerToCell :: Player -> Cell
 playerToCell X = P X
-playerToCell O = P O  
+playerToCell O = P O
+
+getDiags :: Board -> Board
+getDiags boardState = [incGrabber boardState 0]
+-- getDiags [[(P X),E,E],[E,(P X),E],[E,E,(P X)]]
+
+getCdiags :: Board -> Board
+getCdiags boardState = getDiags (reverse boardState)
+
+getRows :: Board -> Board
+getRows boardState = boardState
+
+getCols :: Board -> Board
+getCols boardState = transpose boardState
+
+getThrees :: Board -> Board
+getThrees board = concatMap (\x->x board)[getDiags,getCdiags,getRows,getCols]
+-- getThrees [[(P X),E,E],[E,(P X),E],[E,E,(P X)]]
+-- getThrees [[(P O),(P X),(P O)],[(P X),(P O),(P X)],[E,E,E]]
 
 -- #### Win Conditions ####
 diagThrees :: Board -> [Player]
@@ -154,12 +172,13 @@ diagThrees boardState
     | isAllPlayer res = [cellToPlayer (head res)]
     | otherwise = []
     where res = incGrabber boardState 0
--- whoWonDiag [[(P X),E,E],[E,(P X),E],[E,E,(P X)]]
+-- diagThrees [[(P X),E,E],[E,(P X),E],[E,E,(P X)]]
 
 cDiagThrees :: Board -> [Player]
 cDiagThrees boardState = diagThrees (reverse boardState)
--- whoWonCounterDiag [[(P X),E,E],[E,(P X),E],[E,E,(P X)]]
--- whoWonCounterDiag [[E,E,(P X)],[E,(P X),E],[(P X),E,E]]
+-- cDiagThrees  [[(P X),E,E],[E,(P X),E],[E,E,(P X)]]
+-- cDiagThrees  [[E,E,(P X)],[E,(P X),E],[(P X),E,E]]
+-- cDiagThrees  [[E,E,(P X)],[E,(P X),E],[(P X),E,E]]
 
 rowThrees :: Board -> [Player]
 rowThrees boardState = case (filter isAllPlayer boardState) of
@@ -181,26 +200,26 @@ isBoardFull boardState = all (/= E) (concat boardState)
 -- isBoardFull [[(P X),E,E],[E,(P X),E],[E,E,(P X)]]
 
 terminalState :: Board -> Maybe EndState
-terminalState boardState 
+terminalState boardState
     | not.null $ winState = Just (W (head winState) )
-    | boardFull && (null winState) = Just D 
-    | otherwise = Nothing 
+    | boardFull && (null winState) = Just D
+    | otherwise = Nothing
     where winState = playerThrees boardState
           boardFull = isBoardFull boardState
 -- terminalState [[(P X),E,E],[E,(P X),E],[E,E,(P X)]]
--- terminalState initialState 
+-- terminalState initialState
 
 validMoves :: Player -> Board -> [Move]
 validMoves player boardState = [(x,y) | x<-[0,1,2], y<-[0,1,2], isValidMove player boardState (x,y)]
 -- validMoves O initialState
-        
+
 pickFirstMove player boardState = move player boardState (head (validMoves player boardState))
 -- pickFirstMove X (pickFirstMove O initialState)
 -- pickFirstMove O (pickFirstMove O initialState)
 
 --testBank = do x <- traverse (\z -> randomRIO(1::Int,z)) [1,2,3]
---return x        
-                  
+--return x
+
 playGame initPlayer boardState = case (terminalState boardState) of
                                     Nothing -> newBoard:(playGame (otherPlayer initPlayer) newBoard)
                                     _ -> []
@@ -208,7 +227,7 @@ playGame initPlayer boardState = case (terminalState boardState) of
 
 -- terminalState (last (playGame O initialState))
 
--- [[O,X,O], 
+-- [[O,X,O],
 --  [X,O,X],
 --  [O,E,E]]
  -- pickFirstMove O (pickFirstMove X (pickFirstMove O (pickFirstMove X (pickFirstMove O (pickFirstMove X (pickFirstMove O initialState))))))
@@ -225,30 +244,30 @@ playGame initPlayer boardState = case (terminalState boardState) of
 
 -- isEndStatePath D (gameTree O initialState)
 
--- Given the tic-tac-toe game tree, how many unique draw states are there? 
+-- Given the tic-tac-toe game tree, how many unique draw states are there?
 
 
 
 
 -- findTerminalBoards [[(P O),(P X),(P O)],[(P X),(P O),(P X)],[E,E,E]] (W O) (gameTree O [[(P O),(P X),(P O)],[(P X),(P O),(P X)],[E,E,E]])
 -- x = findTerminalBoards initialState D (gameTree O initialState)
--- z = nub x 
+-- z = nub x
 -- mapM_ putStrLn ( map (unlines . fmap show)  z )
 -- mapM_ putStrLn ( map (unlines . fmap show)  ( nub x ) )
 
 -- Node initialState (map (\x-> Node x [Terminal D]) (makeAllMoves O initialState)
 -- Node initialState (map (\x-> Node x [Terminal D]) (makeAllMoves O initialState))
 --  Node boardState (map (\x-> Node x [Terminal D]) (concatMap (gameTree (otherPlayer player)) boards)
--- x = gameOutcomes O initialState 
+-- x = gameOutcomes O initialState
 -- length x
--- length (filter (D==) x) 
--- length (filter ((W O)==) x) 
--- length (filter ((W X)==) x) 
+-- length (filter (D==) x)
+-- length (filter ((W O)==) x)
+-- length (filter ((W X)==) x)
 -- (length x) == (length (filter (D==) x)) + (length (filter ((W O)==) x)) + (length (filter ((W X)==) x) )
--- length (filter ((W O)==) x) 
--- length (filter ((W X)==) x) 
+-- length (filter ((W O)==) x)
+-- length (filter ((W X)==) x)
 
--- nub (filter (D==) x) 
+-- nub (filter (D==) x)
 
 
 -- Timer: :set +s

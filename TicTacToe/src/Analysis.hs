@@ -1,9 +1,10 @@
 -- Analysis.hs
 -- December 2018
--- Andrew Ribeiro 
+-- Andrew Ribeiro
+-- Contains analysis of TicTacToe boards and player statistics.
 
 module Analysis where
-import TicTacToe 
+import TicTacToe
 import Symmetry
 import Data.List (nub)
 import Data.List.Split
@@ -12,12 +13,13 @@ import Data.List.Split
 -- map symmetries drawBoards
 -- getSymFlags$last$(map makeSym drawBoards)
 
--- symPath initialState 
+-- symPath initialState
 isValidBoard :: Board -> Bool
-isValidBoard board = case threeInstances of 
+isValidBoard board = case threeInstances of
                         [] -> isPieceCountValid board
                         (x:xs) -> pieceCountCond && noMultipleWins && ((countPlayer x board)>=(countPlayer (otherPlayer x) board))
                         where noMultipleWins = (length $ threeInstances) <= 1
                               threeInstances = playerThrees board
                               pieceCountCond = isPieceCountValid board
-                           
+
+-- Proof of minimax optimality for Tic-Tac-Toe.
